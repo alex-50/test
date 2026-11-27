@@ -1,2 +1,2 @@
-print("hi!")
+print("privet!")
 print("test PR")

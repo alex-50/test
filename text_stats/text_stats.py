@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
 """Подсчёт статистики текста: слова, символы, предложения, топ-слов."""
 import argparse
 import re
+import sys
 from collections import Counter
 
 WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
@@ -9,8 +9,21 @@ SENTENCE_RE = re.compile(r"[.!?]+")
 
 
 def read_file(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Файл не найден: {path}")
+    except IsADirectoryError:
+        raise IsADirectoryError(f"Указан путь к папке, а не к файлу: {path}")
+    except PermissionError:
+        raise PermissionError(f"Нет прав на чтение файла: {path}")
+    except UnicodeDecodeError as e:
+        raise ValueError(f"Не удалось прочитать файл как UTF-8: {e}")
+
+    if not text.strip():
+        raise ValueError(f"Файл пустой или содержит только пробелы: {path}")
+    return text
 
 
 def count_words(text):
@@ -37,14 +50,21 @@ def main():
                         help="Сколько топ-слов выводить (по умолчанию 5)")
     args = parser.parse_args()
 
-    text = read_file(args.path)
+    try:
+        text = read_file(args.path)
+    except (FileNotFoundError, IsADirectoryError,
+            PermissionError, ValueError) as e:
+        print(f"Ошибка: {e}", file=sys.stderr)
+        return 1
+
     print(f"Символов: {count_chars(text)}")
     print(f"Слов: {count_words(text)}")
     print(f"Предложений: {count_sentences(text)}")
     print(f"Топ-{args.top} слов:")
     for word, cnt in top_words(text, args.top):
         print(f"  {word}: {cnt}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
